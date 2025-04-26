@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SBML Autolayout and Get Compartment Layout Info</title>
+</head>
+<body>
+  <script type="module">
+    import libsbmlnetwork from './libsbmlnetwork.js';
+
+    libsbmlnetwork().then(Module => {
+      console.log("WASM module initialized");
+
+      const sbmlStr = `<?xml version="1.0" encoding="UTF-8"?>
+<sbml xmlns="http://www.sbml.org/sbml/level3/version2/core" level="3" version="2">
+  <model metaid="__main" id="__main">
+    <listOfCompartments>
+      <compartment sboTerm="SBO:0000410" id="default_compartment" spatialDimensions="3" size="1" constant="true"/>
+    </listOfCompartments>
+    <listOfSpecies>
+      <species id="S1" compartment="default_compartment" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+      <species id="S2" compartment="default_compartment" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+    </listOfSpecies>
+    <listOfReactions>
+      <reaction id="J0" reversible="true">
+        <listOfReactants>
+          <speciesReference species="S1" stoichiometry="1" constant="true"/>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="S2" stoichiometry="1" constant="true"/>
+        </listOfProducts>
+      </reaction>
+    </listOfReactions>
+  </model>
+</sbml>`;
+
+      const sbmlPtr = Module.allocateUTF8(sbmlStr);
+      const docPtr = Module._c_api_readSBML(sbmlPtr);
+      console.log("SBMLDocument* pointer:", docPtr);
+
+      Module._free(sbmlPtr);
+
+      const numLayouts = Module._c_api_getNumLayouts(docPtr);
+      console.log("Number of existing layouts:", numLayouts);
+
+      if (numLayouts === 0) {
+        Module._c_api_autolayout(docPtr);
+        console.log("Autolayout applied because no layouts existed");
+      } else {
+        console.log("Layout already exists, skipping autolayout");
+      }
+
+      // === Loop through compartments ===
+      const numCompartments = Module._c_api_getNumCompartments(docPtr);
+      console.log("Number of compartments:", numCompartments);
+
+      for (let i = 0; i < numCompartments; i++) {
+        const compIdPtr = Module._c_api_getCompartmentId(docPtr, i);
+        const compId = Module.UTF8ToString(compIdPtr);
+        console.log(`Compartment ${i} ID: ${compId}`);
+
+        const compIdStrPtr = Module.allocateUTF8(compId);
+
+        const x = Module._c_api_getX(docPtr, compIdStrPtr);
+        const y = Module._c_api_getY(docPtr, compIdStrPtr);
+        const width = Module._c_api_getWidth(docPtr, compIdStrPtr);
+        const height = Module._c_api_getHeight(docPtr, compIdStrPtr);
+
+        console.log(`Compartment '${compId}' layout: x=${x}, y=${y}, width=${width}, height=${height}`);
+
+        Module._free(compIdStrPtr);
+      }
+
+    });
+  </script>
+</body>
+</html>
