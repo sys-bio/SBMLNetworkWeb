@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SBML x CanvasKit Test</title>
+  <script src="https://unpkg.com/canvaskit-wasm/bin/full/canvaskit.js"></script>
+  <script type="module">
+    import libsbmlnetwork from './libsbmlnetwork.js';
+
+    CanvasKitInit({
+      locateFile: (file) => `https://unpkg.com/canvaskit-wasm/bin/full/${file}`
+    }).then(CanvasKit => {
+      libsbmlnetwork().then(Module => {
+        console.log("WASM module initialized");
+
+        const sbmlStr = `<?xml version="1.0" encoding="UTF-8"?>
+        <sbml xmlns="http://www.sbml.org/sbml/level3/version2/core" level="3" version="2">
+          <model metaid="__main" id="__main">
+            <listOfCompartments>
+              <compartment sboTerm="SBO:0000410" id="default_compartment" spatialDimensions="3" size="1" constant="true"/>
+            </listOfCompartments>
+            <listOfSpecies>
+              <species id="S1" compartment="default_compartment"/>
+              <species id="S2" compartment="default_compartment"/>
+            </listOfSpecies>
+            <listOfReactions>
+              <reaction id="J0" reversible="true">
+                <listOfReactants>
+                  <speciesReference species="S1"/>
+                </listOfReactants>
+                <listOfProducts>
+                  <speciesReference species="S2"/>
+                </listOfProducts>
+              </reaction>
+            </listOfReactions>
+          </model>
+        </sbml>`;
+
+        const sbmlPtr = Module.allocateUTF8(sbmlStr);
+        const docPtr = Module._c_api_readSBML(sbmlPtr);
+        Module._free(sbmlPtr);
+
+        if (Module._c_api_getNumLayouts(docPtr) === 0) {
+          Module._c_api_autolayout(docPtr);
+        }
+
+        const canvasWidth = Module._c_api_getCanvasWidth(docPtr);
+        const canvasHeight = Module._c_api_getCanvasHeight(docPtr);
+
+        // Set up canvas
+        const canvasEl = document.createElement('canvas');
+        canvasEl.width = canvasWidth;
+        canvasEl.height = canvasHeight;
+        canvasEl.style.border = "1px solid #333";
+        document.body.appendChild(canvasEl);
+
+        const surface = CanvasKit.MakeCanvasSurface(canvasEl);
+        if (!surface) {
+          console.error("Failed to create Skia canvas surface.");
+          return;
+        }
+
+        const canvas = surface.getCanvas();
+        canvas.clear(CanvasKit.Color4f(1, 1, 1, 1)); // white background
+
+        const numCompartments = Module._c_api_getNumCompartments(docPtr);
+        for (let i = 0; i < numCompartments; i++) {
+          const compIdPtr = Module._c_api_getCompartmentId(docPtr, i);
+          const compId = Module.UTF8ToString(compIdPtr);
+          const compIdStrPtr = Module.allocateUTF8(compId);
+
+          const x = Module._c_api_getX(docPtr, compIdStrPtr);
+          const y = Module._c_api_getY(docPtr, compIdStrPtr);
+          const width = Module._c_api_getWidth(docPtr, compIdStrPtr);
+          const height = Module._c_api_getHeight(docPtr, compIdStrPtr);
+
+          Module._free(compIdStrPtr);
+
+          const paint = new CanvasKit.Paint();
+          paint.setColor(CanvasKit.Color4f(0.27, 0.51, 0.71, 1.0)); // steelblue
+          paint.setStyle(CanvasKit.PaintStyle.Fill);
+          paint.setAntiAlias(true);
+
+          // Draw rectangle
+          const rect = CanvasKit.LTRBRect(x, y, x + width, y + height);
+          canvas.drawRect(rect, paint);
+
+          // Optional: border
+          const borderPaint = new CanvasKit.Paint();
+          borderPaint.setStyle(CanvasKit.PaintStyle.Stroke);
+          borderPaint.setStrokeWidth(2);
+          borderPaint.setColor(CanvasKit.BLACK);
+          canvas.drawRect(rect, borderPaint);
+        }
+
+        surface.flush();
+      });
+    });
+  </script>
+</head>
+<body style="background-color: #f0f0f0; text-align: center; margin-top: 50px;">
+</body>
+</html>

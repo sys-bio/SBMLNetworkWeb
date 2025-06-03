@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>CanvasKit Skia Demo</title>
+  <script src="https://unpkg.com/canvaskit-wasm/bin/full/canvaskit.js"></script>
+  <style>
+    canvas { border: 1px solid black; }
+  </style>
+</head>
+<body>
+  <h2>CanvasKit Skia Example: Draw a Circle</h2>
+  <canvas id="skiaCanvas" width="500" height="500"></canvas>
+
+  <script>
+    // Load CanvasKit
+    CanvasKitInit({
+      locateFile: (file) => `https://unpkg.com/canvaskit-wasm/bin/full/${file}`
+    }).then((CanvasKit) => {
+      const surface = CanvasKit.MakeCanvasSurface("skiaCanvas");
+      if (!surface) {
+        console.error("Failed to make surface");
+        return;
+      }
+
+      const canvas = surface.getCanvas();
+
+      // Clear the canvas with white
+      canvas.clear(CanvasKit.WHITE);
+
+      // Create a blue paint brush
+      const paint = new CanvasKit.Paint();
+      paint.setColor(CanvasKit.Color4f(0.2, 0.6, 0.9, 1.0)); // RGBA
+      paint.setAntiAlias(true);
+
+      // Draw a filled circle
+      canvas.drawCircle(250, 250, 100, paint);
+
+      surface.flush(); // Render to screen
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SBML Layout Generator</title>
+</head>
+<body>
+  <h2>Generating SBML Layout...</h2>
+  <p>Open the browser console to copy the layout-enriched SBML.</p>
+
+  <script type="module">
+    import libsbmlnetwork from './libsbmlnetwork.js';
+
+    libsbmlnetwork().then(Module => {
+      const sbmlStr = `<?xml version="1.0" encoding="UTF-8"?>
+      <sbml xmlns="http://www.sbml.org/sbml/level3/version2/core" level="3" version="2">
+        <model id="__main">
+          <listOfCompartments>
+            <compartment id="default_compartment"/>
+          </listOfCompartments>
+          <listOfSpecies>
+            <species id="S1" compartment="default_compartment"/>
+            <species id="S2" compartment="default_compartment"/>
+          </listOfSpecies>
+          <listOfReactions>
+            <reaction id="J0">
+              <listOfReactants>
+                <speciesReference species="S1"/>
+              </listOfReactants>
+              <listOfProducts>
+                <speciesReference species="S2"/>
+              </listOfProducts>
+            </reaction>
+          </listOfReactions>
+        </model>
+      </sbml>`;
+
+      const sbmlPtr = Module.allocateUTF8(sbmlStr);
+      const docPtr = Module._c_api_readSBML(sbmlPtr);
+      Module._free(sbmlPtr);
+
+      // Generate layout
+      Module._c_api_autolayout(docPtr);
+
+      // Export SBML with layout as string
+      const layoutStrPtr = Module._c_api_writeSBMLToString(docPtr);
+      const layoutSBMLStr = Module.UTF8ToString(layoutStrPtr);
+      Module._free(layoutStrPtr);
+
+      console.log('🔧 Final SBML with layout:\n\n', layoutSBMLStr);
+      alert("SBML layout generated! Open the console to copy it.");
+    });
+  </script>
+</body>
+</html>

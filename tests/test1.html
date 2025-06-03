@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SBML x D3.JS Test</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script> <!-- D3JS CDN -->
+  <style>
+    body {
+      background-color: #f0f0f0;
+      text-align: center;
+      margin-top: 50px;
+    }
+    svg {
+      border: 1px solid #333;
+    }
+  </style>
+</head>
+<body>
+  <script type="module">
+
+    // Import libsbmlnetwork module
+    import libsbmlnetwork from './libsbmlnetwork.js';
+
+    // Initialize WASM module
+    libsbmlnetwork().then(Module => {
+        console.log("WASM module initialized");
+
+        // Defining SBML string (represents a biological model)
+        const sbmlStr = `<?xml version="1.0" encoding="UTF-8"?>
+        <sbml xmlns="http://www.sbml.org/sbml/level3/version2/core" level="3" version="2">
+        <model metaid="__main" id="__main">
+            <listOfCompartments>
+            <compartment sboTerm="SBO:0000410" id="default_compartment" spatialDimensions="3" size="1" constant="true"/>
+            </listOfCompartments>
+            <listOfSpecies>
+            <species id="S1" compartment="default_compartment" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+            <species id="S2" compartment="default_compartment" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+            </listOfSpecies>
+            <listOfReactions>
+            <reaction id="J0" reversible="true">
+                <listOfReactants>
+                <speciesReference species="S1" stoichiometry="1" constant="true"/>
+                </listOfReactants>
+                <listOfProducts>
+                <speciesReference species="S2" stoichiometry="1" constant="true"/>
+                </listOfProducts>
+            </reaction>
+            </listOfReactions>
+        </model>
+        </sbml>`;
+
+    // allocating memmory        
+    const sbmlPtr = Module.allocateUTF8(sbmlStr);
+    const docPtr = Module._c_api_readSBML(sbmlPtr);
+    console.log("SBMLDocument* pointer:", docPtr);
+    Module._free(sbmlPtr);
+    const numLayouts = Module._c_api_getNumLayouts(docPtr);
+    console.log("Number of existing layouts:", numLayouts);
+    if (numLayouts === 0) {
+      Module._c_api_autolayout(docPtr);
+      console.log("Autolayout applied because no layouts existed");
+    } else {
+      console.log("Layout already exists, skipping autolayout");
+    }
+
+    const canvasWidth = Module._c_api_getCanvasWidth(docPtr);
+    const canvasHeight = Module._c_api_getCanvasHeight(docPtr);
+
+    const svg = d3.select("body")
+        .append("svg")
+        .attr("width", canvasWidth)
+        .attr("height", canvasHeight)
+        .style("background-color", "#FF0000");
+
+    console.log(`Canvas dimensions: width=${canvasWidth}, height=${canvasHeight}`);
+
+    // testing module, functions, SBML string
+    const numCompartments = Module._c_api_getNumCompartments(docPtr);
+    console.log("Number of compartments:", numCompartments);
+
+    // Loop through compartments to get dimensions
+    for (let i = 0; i < numCompartments; i++) {
+        const compIdPtr = Module._c_api_getCompartmentId(docPtr, i);
+        console.log("Compartment ID pointer:", compIdPtr);
+        const compId = Module.UTF8ToString(compIdPtr);
+        console.log(`Compartment ${i} ID: ${compId}`);
+
+        const compIdStrPtr = Module.allocateUTF8(compId);
+
+        const x = Module._c_api_getX(docPtr, compIdStrPtr);
+        const y = Module._c_api_getY(docPtr, compIdStrPtr);
+
+        const width = Module._c_api_getWidth(docPtr, compIdStrPtr);
+        const height = Module._c_api_getHeight(docPtr, compIdStrPtr);
+
+        console.log(`Compartment '${compId}' dimensions: width=${width}, height=${height}`);
+
+        /*const svg = d3.select("body")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);*/
+        
+        svg.append("rect")
+        .attr("x", x)
+        .attr("y", y)
+        .attr("width", 100)
+        .attr("height", 100)
+        .attr("fill", "steelblue")  // blue compartments
+        .attr("stroke", "#000");    // optional: black border
+
+        Module._free(compIdStrPtr);
+    }
+
+    /*
+    const width = 800;
+    const height = 500;
+  
+    const svg = d3.select("body")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+  
+    const nodes = [
+      { id: "S1", type: "circle" },
+      { id: "S2", type: "circle" },
+      { id: "S3", type: "rect" },
+      { id: "S4", type: "rect" },
+      { id: "S5", type: "rect" }
+    ];
+  
+    const links = [
+      { source: "S1", target: "S2", dashed: false },
+      { source: "S2", target: "S3", dashed: true },
+      { source: "S3", target: "S4", dashed: false },
+      { source: "S4", target: "S5", dashed: false }
+    ];
+  
+    // Arrowhead marker
+    svg.append("defs").append("marker")
+      .attr("id", "arrow")
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 10)
+      .attr("refY", 0)
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,-5L10,0L0,5")
+      .attr("fill", "steelblue");
+  
+    // Simulation setup
+    const simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id(d => d.id).distance(150))
+      .force("charge", d3.forceManyBody().strength(-300))
+      .force("center", d3.forceCenter(width / 2, height / 2));
+  
+    // Path lines for links
+    const link = svg.selectAll("path.link")
+      .data(links)
+      .enter()
+      .append("path")
+      .attr("class", "link")
+      .attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-width", 2)
+      .attr("stroke-dasharray", d => d.dashed ? "5,5" : null)
+      .attr("marker-end", "url(#arrow)");
+  
+    // Circle nodes
+    const circles = svg.selectAll("circle")
+      .data(nodes.filter(d => d.type === "circle"))
+      .enter()
+      .append("circle")
+      .attr("r", 10)
+      .attr("fill", "peachpuff")
+      .call(drag(simulation));
+  
+    // Rect nodes
+    const rects = svg.selectAll("rect")
+      .data(nodes.filter(d => d.type === "rect"))
+      .enter()
+      .append("rect")
+      .attr("width", 50)
+      .attr("height", 40)
+      .attr("fill", "#f9c999")
+      .attr("stroke", "darkorange")
+      .call(drag(simulation));
+  
+    // Text labels
+    const labels = svg.selectAll("text")
+      .data(nodes)
+      .enter()
+      .append("text")
+      .attr("text-anchor", "middle")
+      .attr("font-weight", d => d.id === "S2" ? "bold" : "normal")
+      .text(d => d.id);
+  
+    // TICK UPDATE FUNCTION
+    simulation.on("tick", () => {
+      // Update arrows
+      link.attr("d", d => {
+        const dx = d.target.x - d.source.x;
+        const dy = d.target.y - d.source.y;
+        const angle = Math.atan2(dy, dx);
+  
+        const srcOffset = d.source.type === "circle" ? 10 : 0;
+        const tgtOffset = d.target.type === "circle" ? 10 : 25;
+  
+        const x1 = d.source.x + srcOffset * Math.cos(angle);
+        const y1 = d.source.y + srcOffset * Math.sin(angle);
+        const x2 = d.target.x - tgtOffset * Math.cos(angle);
+        const y2 = d.target.y - tgtOffset * Math.sin(angle);
+  
+        return `M${x1},${y1} L${x2},${y2}`;
+      });
+  
+      // Update circle positions
+      circles
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y);
+  
+      // Update rect positions
+      rects
+        .attr("x", d => d.x - 25)
+        .attr("y", d => d.y - 20);
+  
+      // Update label positions
+      labels
+        .attr("x", d => d.x)
+        .attr("y", d => d.type === "rect" ? d.y + 5 : d.y + 20);
+    });
+  
+    // DRAG FUNCTIONS
+    function drag(simulation) {
+      return d3.drag()
+        .on("start", (event, d) => {
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          d.fx = d.x;
+          d.fy = d.y;
+        })
+        .on("drag", (event, d) => {
+          d.fx = event.x;
+          d.fy = event.y;
+        })
+        .on("end", (event, d) => {
+          if (!event.active) simulation.alphaTarget(0);
+          d.fx = null;
+          d.fy = null;
+        });
+    }
+    */
+
+});
+  </script>
+
+</body>
+</html>

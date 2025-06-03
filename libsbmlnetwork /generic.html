@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SBML → D3.js Viewer</title>
+  <!-- Load D3.js v7 from CDN -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      background-color: #f9f9f9;
+      margin: 20px;
+      font-family: sans-serif;
+    }
+    svg {
+      border: 1px solid #aaa;
+      background-color: #ffffff;
+      /* Center the SVG on the page */
+      display: block;
+      margin: 0 auto;
+    }
+    /* Optional: style for labels */
+    .compartment-label {
+      font-size: 12px;
+      fill: #333333;
+      pointer-events: none;
+    }
+    .species-label {
+      font-size: 10px;
+      fill: #000000;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <h2 style="text-align:center;">SBML → D3.js Auto‐layout Viewer</h2>
+  <div id="diagram"></div>
+  <button id="reset-layout" style="display:block;margin:10px auto;">Reset Layout for This Model</button>
+
+  <script type="module">
+    // Import the WASM‐wrapped libSBMLNetwork module
+    import libsbmlnetwork from './libsbmlnetwork.js';
+
+    // Load SBML string from an external file
+    const SBML_FILE = '../sbml-examples/simple_sbml_model.xml';
+    // const SBML_FILE = '../sbml-examples/figure_2_sbgn_compliant.xml';
+
+    // Utility: simple hash for SBML string (for demo; use a better hash for production)
+    function hashSBML(sbml) {
+      let hash = 0, i, chr;
+      for (i = 0; i < sbml.length; i++) {
+        chr = sbml.charCodeAt(i);
+        hash = ((hash << 5) - hash) + chr;
+        hash |= 0;
+      }
+      return hash.toString();
+    }
+    function getLayoutKey(sbml) {
+      return 'layoutSBML_' + hashSBML(sbml);
+    }
+
+    // Fetch the SBML file, then proceed with visualization
+    fetch(SBML_FILE)
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to load SBML file');
+        return response.text();
+      })
+      .then(sbmlStr => {
+        const layoutKey = getLayoutKey(sbmlStr);
+        let layoutSBML = localStorage.getItem(layoutKey);
+        let firstTime = false;
+        if (!layoutSBML) {
+          firstTime = true;
+          layoutSBML = sbmlStr;
+        }
+
+        libsbmlnetwork().then(Module => {
+          console.log("✅ libSBMLNetwork WASM loaded.");
+
+          // Parse the (possibly layout-enriched) SBML
+          const sbmlPtr = Module.allocateUTF8(layoutSBML);
+          // docPtr: pointer to the SBML in WASM
+          const docPtr = Module._c_api_readSBML(sbmlPtr);
+          Module._free(sbmlPtr);
+          if (docPtr === 0) {
+            console.error("❌ Failed to parse SBML.");
+            return;
+          }
+
+          // If first time, run autolayout and persist the result
+          if (firstTime) {
+            if (Module._c_api_getNumLayouts(docPtr) === 0) {
+              Module._c_api_autolayout(docPtr);
+            }
+            const layoutStrPtr = Module._c_api_writeSBMLToString(docPtr);
+            const layoutSBMLStr = Module.UTF8ToString(layoutStrPtr);
+            Module._free(layoutStrPtr);
+            localStorage.setItem(layoutKey, layoutSBMLStr);
+          }
+
+          // ─── 4) READ CANVAS DIMENSIONS ──────────────────────────────────────────
+          const canvasWidth  = Module._c_api_getCanvasWidth(docPtr);
+          const canvasHeight = Module._c_api_getCanvasHeight(docPtr);
+          console.log(`Canvas size from SBML layout: ${canvasWidth}×${canvasHeight}`);
+
+          // Create an SVG element of exactly that size
+          const svg = d3
+            .select("#diagram")
+            .append("svg")
+            .attr("width", canvasWidth)
+            .attr("height", canvasHeight);
+
+          // OPTIONAL: draw a thin border around the SVG
+          svg.style("border", "1px solid #bbb");
+
+          // ─── 5) DRAW COMPARTMENTS ────────────────────────────────────────────────
+          const nComp = Module._c_api_getNumCompartments(docPtr);
+          console.log("Number of compartments:", nComp);
+          for (let i = 0; i < nComp; i++) {
+            // Get the compartment's ID string pointer, then convert to JS string
+            const compIdPtr = Module._c_api_getCompartmentId(docPtr, i);
+            const compId = Module.UTF8ToString(compIdPtr);
+            // Re‐allocate UTF8 for any subsequent layout calls
+            const compIdStrPtr = Module.allocateUTF8(compId);
+
+            // Read X, Y, width, height from the layout data
+            const cx = Module._c_api_getX(docPtr, compIdStrPtr);
+            const cy = Module._c_api_getY(docPtr, compIdStrPtr);
+            const cw = Module._c_api_getWidth(docPtr, compIdStrPtr);
+            const ch = Module._c_api_getHeight(docPtr, compIdStrPtr);
+
+            // Free the UTF8 pointer now that we're done
+            Module._free(compIdStrPtr);
+
+            // Draw the compartment as a light gray rectangle with a subtle border
+            svg
+              .append("rect")
+              .attr("x", cx)
+              .attr("y", cy)
+              .attr("width", cw)
+              .attr("height", ch)
+              .attr("fill", "#d3d3d3")
+              .attr("stroke", "#777")
+              .attr("stroke-width", 1);
+
+            // Draw a small label (the compartment ID) in the top‐left corner
+            svg
+              .append("text")
+              .attr("class", "compartment-label")
+              .attr("x", cx + 4)
+              .attr("y", cy + 14)
+              .text(compId);
+          }
+
+          // ─── 6) DRAW SPECIES ─────────────────────────────────────────────────────
+          const nSpecies = Module._c_api_getNumSpecies(docPtr);
+          console.log("Number of species:", nSpecies);
+          for (let j = 0; j < nSpecies; j++) {
+            const spIdPtr = Module._c_api_getSpeciesId(docPtr, j);
+            const speciesId = Module.UTF8ToString(spIdPtr);
+            const spIdStrPtr = Module.allocateUTF8(speciesId);
+
+            // Read the layout box for this species
+            const sx = Module._c_api_getX(docPtr, spIdStrPtr);
+            const sy = Module._c_api_getY(docPtr, spIdStrPtr);
+            const sw = Module._c_api_getWidth(docPtr, spIdStrPtr);
+            const sh = Module._c_api_getHeight(docPtr, spIdStrPtr);
+
+            Module._free(spIdStrPtr);
+
+            // If width ≈ height, draw a circle; otherwise a rounded rectangle
+            const eps = 1e-3;
+            if (Math.abs(sw - sh) < eps) {
+              // Circle: center = (sx + sw/2, sy + sh/2)
+              svg
+                .append("circle")
+                .attr("cx", sx + sw / 2)
+                .attr("cy", sy + sh / 2)
+                .attr("r", sw / 2)
+                .attr("fill", "#add8e6")
+                .attr("stroke", "#555")
+                .attr("stroke-width", 1);
+            } else {
+              // Rounded rect
+              svg
+                .append("rect")
+                .attr("x", sx)
+                .attr("y", sy)
+                .attr("width", sw)
+                .attr("height", sh)
+                .attr("rx", 6) // corner radius
+                .attr("ry", 6)
+                .attr("fill", "#add8e6")
+                .attr("stroke", "#555")
+                .attr("stroke-width", 1);
+            }
+
+            // Label the species at its center
+            svg
+              .append("text")
+              .attr("class", "species-label")
+              .attr("x", sx + sw / 2)
+              .attr("y", sy + sh / 2 + 4) // +4 to roughly center vertically
+              .attr("text-anchor", "middle")
+              .text(speciesId);
+          }
+
+          // ─── 7) DRAW REACTIONS (POLYLINES WITH ARROWHEADS) ───────────────────────
+          const nReactions = Module._c_api_getNumReactions(docPtr);
+          console.log("Number of reactions:", nReactions);
+
+          // First, define an <arrowhead> marker in <defs>
+          const defs = svg.append("defs");
+          defs
+            .append("marker")
+            .attr("id", "arrowhead")
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 10)
+            .attr("refY", 0)
+            .attr("markerUnits", "strokeWidth")
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto")
+            .append("path")
+            .attr("d", "M0,-5L10,0L0,5")
+            .attr("fill", "#696969");
+
+          // Now loop over every reaction
+          for (let k = 0; k < nReactions; k++) {
+            const rxnIdPtr = Module._c_api_getReactionId(docPtr, k);
+            const rxnId = Module.UTF8ToString(rxnIdPtr);
+            const rxnIdStrPtr = Module.allocateUTF8(rxnId);
+
+            // How many segments does this reaction have?
+            // const nSegs = Module._c_api_getNumCurveSegments(docPtr, rxnIdStrPtr);
+            const nSegs = Module._c_api_getNumSpeciesReferenceCurveSegments(1, rxnIdStrPtr);
+            console.log("Number of segments:", nSegs);
+
+            // Gather all (x,y) points into an array
+            const pts = [];
+            for (let s = 0; s < nSegs; s++) {
+              // Start point
+              const sx = Module._c_api_getCurveSegmentStartPointX(docPtr, rxnIdStrPtr, s);
+              const sy = Module._c_api_getCurveSegmentStartPointY(docPtr, rxnIdStrPtr, s);
+              if (s === 0) pts.push([sx, sy]); // Only add the start of the first segment
+
+              // End point
+              const ex = Module._c_api_getCurveSegmentEndPointX(docPtr, rxnIdStrPtr, s);
+              const ey = Module._c_api_getCurveSegmentEndPointY(docPtr, rxnIdStrPtr, s);
+              pts.push([ex, ey]);
+            }
+            Module._free(rxnIdStrPtr);
+
+            console.log("Reaction", rxnId, "points:", pts);
+
+            // Build a D3 line generator (straight segments)
+            const lineGen = d3.line().curve(d3.curveLinear);
+
+            // Append a <path> using those points, with an arrowhead at the end
+            svg
+              .append("path")
+              .attr("d", lineGen(pts))
+              .attr("fill", "none")
+              .attr("stroke", "#696969")
+              .attr("stroke-width", 2)
+              .attr("marker-end", "url(#arrowhead)");
+
+            // OPTIONAL: place a tiny reaction‐label at the midpoint of the last segment
+            // (This is just one strategy—feel free to move it if you want every reaction labeled.)
+            if (pts.length >= 2) {
+              const [x1, y1] = pts[pts.length - 2];
+              const [x2, y2] = pts[pts.length - 1];
+              const midX = (x1 + x2) / 2;
+              const midY = (y1 + y2) / 2;
+              svg
+                .append("text")
+                .attr("x", midX)
+                .attr("y", midY - 6)
+                .attr("font-size", 9)
+                .attr("fill", "#444")
+                .attr("text-anchor", "middle")
+                .text(rxnId);
+            }
+          }
+
+          console.log("✅ Rendering complete.");
+        
+          // Add reset button logic
+          document.getElementById('reset-layout').onclick = function() {
+            localStorage.removeItem(layoutKey);
+            location.reload();
+          };
+        });
+      })
+      .catch(err => {
+        document.getElementById('diagram').innerText = 'Error: ' + err.message;
+      });
+  </script>
+</body>
+</html>

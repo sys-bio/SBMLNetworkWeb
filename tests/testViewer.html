@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Using autolayout script</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script> <!-- D3JS CDN -->
+  <style>
+    body {
+      background-color: #f0f0f0;
+      text-align: center;
+      margin-top: 50px;
+    }
+    svg {
+      border: 1px solid #333;
+    }
+  </style>
+</head>
+<body>
+    <script type="module">
+        import libsbmlnetwork from './libsbmlnetwork.js';
+        import layoutSBMLStr from './layout_stable.xml?raw';
+
+        
+        libsbmlnetwork().then(Module => {
+          /*const sbmlStr = `<?xml version="1.0" encoding="UTF-8"?>
+          <sbml xmlns="http://www.sbml.org/sbml/level3/version2/core" level="3" version="2">
+            <model metaid="__main" id="__main">
+              <listOfCompartments>
+                <compartment id="default_compartment" size="1" constant="true"/>
+              </listOfCompartments>
+              <listOfSpecies>
+                <species id="S1" compartment="default_compartment"/>
+                <species id="S2" compartment="default_compartment"/>
+              </listOfSpecies>
+              <listOfReactions>
+                <reaction id="J0" reversible="true">
+                  <listOfReactants>
+                    <speciesReference species="S1"/>
+                  </listOfReactants>
+                  <listOfProducts>
+                    <speciesReference species="S2"/>
+                  </listOfProducts>
+                </reaction>
+              </listOfReactions>
+            </model>
+          </sbml>`;
+          */
+        
+          // const sbmlPtr = Module.allocateUTF8(sbmlStr);
+          // const docPtr = Module._c_api_readSBML(sbmlPtr);
+
+          const sbmlPtr = Module.allocateUTF8(layoutSBMLStr);
+          const docPtr = Module._c_api_readSBML(sbmlPtr);
+          Module._free(sbmlPtr);
+        
+          // not calling autolayout here, as the layout is already provided in the SBML string
+          /*
+          if (Module._c_api_getNumLayouts(docPtr) === 0) {
+            Module._c_api_autolayout(docPtr);
+          }
+          */
+
+          const numLayouts = Module._c_api_getNumLayouts(docPtr);
+          console.log("Number of existing layouts:", numLayouts); // should be > 0
+
+          const canvasWidth = Module._c_api_getCanvasWidth(docPtr);
+          const canvasHeight = Module._c_api_getCanvasHeight(docPtr);
+        
+          const svg = d3.select("body")
+            .append("svg")
+            .attr("width", canvasWidth)
+            .attr("height", canvasHeight)
+            .style("background-color", "#fdfcf7"); // soft beige
+        
+          // Compartments
+          const numCompartments = Module._c_api_getNumCompartments(docPtr);
+          for (let i = 0; i < numCompartments; i++) {
+            const id = Module.UTF8ToString(Module._c_api_getCompartmentId(docPtr, i));
+            const idPtr = Module.allocateUTF8(id);
+        
+            const x = Module._c_api_getX(docPtr, idPtr);
+            const y = Module._c_api_getY(docPtr, idPtr);
+            const w = Module._c_api_getWidth(docPtr, idPtr);
+            const h = Module._c_api_getHeight(docPtr, idPtr);
+        
+            svg.append("rect")
+              .attr("x", x)
+              .attr("y", y)
+              .attr("width", w)
+              .attr("height", h)
+              .attr("fill", "#e6e6e6") // soft gray
+              .attr("stroke", "#999");
+        
+            Module._free(idPtr);
+          }
+        
+          // Species
+          const numSpecies = Module._c_api_getNumSpecies(docPtr);
+          const speciesMap = {};
+          for (let i = 0; i < numSpecies; i++) {
+            const id = Module.UTF8ToString(Module._c_api_getSpeciesId(docPtr, i));
+            const idPtr = Module.allocateUTF8(id);
+            const x = Module._c_api_getX(docPtr, idPtr);
+            const y = Module._c_api_getY(docPtr, idPtr);
+            speciesMap[id] = { id, x, y };
+            Module._free(idPtr);
+        
+            svg.append("circle")
+              .attr("cx", x)
+              .attr("cy", y)
+              .attr("r", 20)
+              .attr("fill", "#d8cfc4") // tan
+              .attr("stroke", "#666");
+        
+            svg.append("text")
+              .attr("x", x)
+              .attr("y", y + 5)
+              .attr("text-anchor", "middle")
+              .attr("font-size", "12px")
+              .attr("fill", "#333")
+              .text(id);
+          }
+        
+          // Reactions
+          const numReactions = Module._c_api_getNumReactions(docPtr);
+          for (let i = 0; i < numReactions; i++) {
+            const id = Module.UTF8ToString(Module._c_api_getReactionId(docPtr, i));
+            const idPtr = Module.allocateUTF8(id);
+        
+            const x = Module._c_api_getX(docPtr, idPtr);
+            const y = Module._c_api_getY(docPtr, idPtr);
+        
+            // Draw reaction node (as a small square)
+            svg.append("rect")
+              .attr("x", x - 8)
+              .attr("y", y - 8)
+              .attr("width", 16)
+              .attr("height", 16)
+              .attr("fill", "#ccc")
+              .attr("stroke", "#444");
+        
+            svg.append("text")
+              .attr("x", x)
+              .attr("y", y + 4)
+              .attr("text-anchor", "middle")
+              .attr("font-size", "10px")
+              .attr("fill", "#222")
+              .text(id);
+        
+            // Edges: reactants → reaction
+            const numReactants = Module._c_api_getNumReactants(docPtr, idPtr);
+            for (let j = 0; j < numReactants; j++) {
+              const specId = Module.UTF8ToString(Module._c_api_getReactantSpecies(docPtr, idPtr, j));
+              const { x: sx, y: sy } = speciesMap[specId];
+              svg.append("line")
+                .attr("x1", sx)
+                .attr("y1", sy)
+                .attr("x2", x)
+                .attr("y2", y)
+                .attr("stroke", "#888")
+                .attr("stroke-width", 1.5);
+            }
+        
+            // Edges: reaction → products
+            const numProducts = Module._c_api_getNumProducts(docPtr, idPtr);
+            for (let j = 0; j < numProducts; j++) {
+              const specId = Module.UTF8ToString(Module._c_api_getProductSpecies(docPtr, idPtr, j));
+              const { x: px, y: py } = speciesMap[specId];
+              svg.append("line")
+                .attr("x1", x)
+                .attr("y1", y)
+                .attr("x2", px)
+                .attr("y2", py)
+                .attr("stroke", "#888")
+                .attr("stroke-width", 1.5);
+            }
+        
+            Module._free(idPtr);
+          }
+        });
+    </script>
+
+</body>
+</html>

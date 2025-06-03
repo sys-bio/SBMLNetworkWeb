@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbml xmlns="http://www.sbml.org/sbml/level3/version2/core" xmlns:layout="http://www.sbml.org/sbml/level3/version1/layout/version1" xmlns:render="http://www.sbml.org/sbml/level3/version1/render/version1" level="3" version="2" layout:required="false" render:required="false">
+  <model id="__main">
+    <listOfCompartments>
+      <compartment id="default_compartment"/>
+    </listOfCompartments>
+    <listOfSpecies>
+      <species id="S1" compartment="default_compartment"/>
+      <species id="S2" compartment="default_compartment"/>
+    </listOfSpecies>
+    <listOfReactions>
+      <reaction id="J0">
+        <listOfReactants>
+          <speciesReference species="S1"/>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="S2"/>
+        </listOfProducts>
+      </reaction>
+    </listOfReactions>
+    <layout:listOfLayouts xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:layout="http://www.sbml.org/sbml/level3/version1/layout/version1">
+      <layout:layout layout:id="libSBMLNetwork_Layout">
+        <layout:dimensions layout:width="362.544077061674" layout:height="362.886542700351"/>
+        <layout:listOfCompartmentGlyphs>
+          <layout:compartmentGlyph layout:id="default_compartment_Glyph_0" layout:compartment="default_compartment">
+            <layout:boundingBox layout:id="default_compartment_Glyph_0_bb">
+              <layout:position layout:x="-1.4210854715202e-14" layout:y="0"/>
+              <layout:dimensions layout:width="362.544077061674" layout:height="362.886542700351"/>
+            </layout:boundingBox>
+          </layout:compartmentGlyph>
+        </layout:listOfCompartmentGlyphs>
+        <layout:listOfSpeciesGlyphs>
+          <layout:speciesGlyph layout:id="S1_Glyph_0" layout:species="S1">
+            <layout:boundingBox layout:id="S1_Glyph_0_bb">
+              <layout:position layout:x="272.544077061674" layout:y="30"/>
+              <layout:dimensions layout:width="60" layout:height="36"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="S2_Glyph_0" layout:species="S2">
+            <layout:boundingBox layout:id="S2_Glyph_0_bb">
+              <layout:position layout:x="30" layout:y="296.886542700351"/>
+              <layout:dimensions layout:width="60" layout:height="36"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+        </layout:listOfSpeciesGlyphs>
+        <layout:listOfReactionGlyphs>
+          <layout:reactionGlyph layout:id="J0_Glyph_0" layout:reaction="J0">
+            <layout:curve>
+              <layout:listOfCurveSegments>
+                <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                  <layout:start layout:x="181.272038530837" layout:y="181.443271350176"/>
+                  <layout:end layout:x="181.272038530837" layout:y="181.443271350176"/>
+                  <layout:basePoint1 layout:x="181.272038530837" layout:y="181.443271350176"/>
+                  <layout:basePoint2 layout:x="181.272038530837" layout:y="181.443271350176"/>
+                </layout:curveSegment>
+              </layout:listOfCurveSegments>
+            </layout:curve>
+            <layout:listOfSpeciesReferenceGlyphs>
+              <layout:speciesReferenceGlyph layout:id="S1_Glyph_0_J0_Glyph_0_Stoichiometry_0_Glyph_0" layout:speciesGlyph="S1_Glyph_0" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="181.272038530837" layout:y="181.443271350176"/>
+                      <layout:end layout:x="279.460327308282" layout:y="73.4005055034851"/>
+                      <layout:basePoint1 layout:x="208.174088502655" layout:y="151.841249336235"/>
+                      <layout:basePoint2 layout:x="208.174088502655" layout:y="151.841249336235"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="S2_Glyph_0_J0_Glyph_0_Stoichiometry_0_Glyph_0" layout:speciesGlyph="S2_Glyph_0" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="181.272038530837" layout:y="181.443271350176"/>
+                      <layout:end layout:x="83.0837497533916" layout:y="289.486037196866"/>
+                      <layout:basePoint1 layout:x="154.369988559019" layout:y="211.045293364116"/>
+                      <layout:basePoint2 layout:x="154.369988559019" layout:y="211.045293364116"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+            </layout:listOfSpeciesReferenceGlyphs>
+          </layout:reactionGlyph>
+        </layout:listOfReactionGlyphs>
+        <layout:listOfTextGlyphs>
+          <layout:textGlyph layout:id="default_compartment_Glyph_0_TextGlyph_0" layout:originOfText="default_compartment" layout:graphicalObject="default_compartment_Glyph_0">
+            <layout:boundingBox layout:id="default_compartment_Glyph_0_TextGlyph_0_bb">
+              <layout:position layout:x="-1.4210854715202e-14" layout:y="0"/>
+              <layout:dimensions layout:width="362.544077061674" layout:height="362.886542700351"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="S1_Glyph_0_TextGlyph_0" layout:originOfText="S1" layout:graphicalObject="S1_Glyph_0">
+            <layout:boundingBox layout:id="S1_Glyph_0_TextGlyph_0_bb">
+              <layout:position layout:x="272.544077061674" layout:y="30"/>
+              <layout:dimensions layout:width="60" layout:height="36"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="S2_Glyph_0_TextGlyph_0" layout:originOfText="S2" layout:graphicalObject="S2_Glyph_0">
+            <layout:boundingBox layout:id="S2_Glyph_0_TextGlyph_0_bb">
+              <layout:position layout:x="30" layout:y="296.886542700351"/>
+              <layout:dimensions layout:width="60" layout:height="36"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="J0_Glyph_0_TextGlyph_0" layout:originOfText="J0" layout:graphicalObject="J0_Glyph_0">
+            <layout:boundingBox layout:id="J0_Glyph_0_TextGlyph_0_bb">
+              <layout:position layout:x="186.272038530837" layout:y="186.443271350176"/>
+              <layout:dimensions layout:width="30" layout:height="30"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+        </layout:listOfTextGlyphs>
+        <render:listOfRenderInformation xmlns:render="http://www.sbml.org/sbml/level3/version1/render/version1">
+          <render:renderInformation render:id="libSBMLNetwork_Local_Render" render:referenceRenderInformation="libSBMLNetwork_Global_Render"/>
+        </render:listOfRenderInformation>
+      </layout:layout>
+      <render:listOfGlobalRenderInformation xmlns:render="http://www.sbml.org/sbml/level3/version1/render/version1">
+        <render:renderInformation render:id="libSBMLNetwork_Global_Render" render:backgroundColor="white">
+          <render:listOfColorDefinitions>
+            <render:colorDefinition render:id="white" render:value="#ffffff"/>
+            <render:colorDefinition render:id="black" render:value="#000000"/>
+            <render:colorDefinition render:id="lightgray" render:value="#d3d3d3"/>
+            <render:colorDefinition render:id="darkslategray" render:value="#2f4f4f"/>
+            <render:colorDefinition render:id="darkcyan" render:value="#008b8b"/>
+            <render:colorDefinition render:id="teal" render:value="#008080"/>
+            <render:colorDefinition render:id="silver" render:value="#c0c0c0"/>
+          </render:listOfColorDefinitions>
+          <render:listOfLineEndings>
+            <render:lineEnding render:id="productHead">
+              <layout:boundingBox layout:id="productHead_bb">
+                <layout:position layout:x="-12" layout:y="-6"/>
+                <layout:dimensions layout:width="12" layout:height="12"/>
+              </layout:boundingBox>
+              <render:g>
+                <render:polygon render:stroke="black" render:stroke-width="2" render:fill="black">
+                  <render:listOfElements>
+                    <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                    <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="100%" render:y="50%"/>
+                    <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="100%"/>
+                  </render:listOfElements>
+                </render:polygon>
+              </render:g>
+            </render:lineEnding>
+            <render:lineEnding render:id="modifierHead">
+              <layout:boundingBox layout:id="modifierHead_bb">
+                <layout:position layout:x="-12" layout:y="-6"/>
+                <layout:dimensions layout:width="12" layout:height="12"/>
+              </layout:boundingBox>
+              <render:g>
+                <render:ellipse render:stroke="black" render:stroke-width="2" render:fill="white" render:cx="50%" render:cy="50%" render:rx="50%"/>
+              </render:g>
+            </render:lineEnding>
+            <render:lineEnding render:id="activatorHead">
+              <layout:boundingBox layout:id="activatorHead_bb">
+                <layout:position layout:x="-12" layout:y="-6"/>
+                <layout:dimensions layout:width="12" layout:height="12"/>
+              </layout:boundingBox>
+              <render:g>
+                <render:polygon render:stroke="black" render:stroke-width="2" render:fill="white">
+                  <render:listOfElements>
+                    <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="50%"/>
+                    <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="50%" render:y="0"/>
+                    <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="100%" render:y="50%"/>
+                    <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="50%" render:y="100%"/>
+                  </render:listOfElements>
+                </render:polygon>
+              </render:g>
+            </render:lineEnding>
+            <render:lineEnding render:id="inhibitorHead">
+              <layout:boundingBox layout:id="inhibitorHead_bb">
+                <layout:position layout:x="-12" layout:y="-6"/>
+                <layout:dimensions layout:width="12" layout:height="12"/>
+              </layout:boundingBox>
+              <render:g>
+                <render:rectangle render:stroke="black" render:stroke-width="2" render:fill="white" render:x="80%" render:y="0" render:width="20%" render:height="100%"/>
+              </render:g>
+            </render:lineEnding>
+          </render:listOfLineEndings>
+          <render:listOfStyles>
+            <render:style render:id="COMPARTMENTGLYPH_style_0" render:typeList="COMPARTMENTGLYPH">
+              <render:g render:stroke="darkcyan" render:font-family="sans-serif" render:font-weight="normal" render:font-style="normal" render:text-anchor="middle" render:vtext-anchor="bottom" render:font-size="10">
+                <render:rectangle render:stroke="darkcyan" render:stroke-width="2" render:fill="lightgray" render:x="0" render:y="0" render:width="100%" render:height="100%" render:rx="25" render:ry="25"/>
+              </render:g>
+            </render:style>
+            <render:style render:id="SPECIESGLYPH_style_0" render:typeList="SPECIESGLYPH">
+              <render:g render:stroke="black" render:font-family="sans-serif" render:font-weight="normal" render:font-style="normal" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="24">
+                <render:rectangle render:stroke="black" render:stroke-width="2" render:fill="white" render:x="0" render:y="0" render:width="100%" render:height="100%" render:rx="6" render:ry="3.6"/>
+              </render:g>
+            </render:style>
+            <render:style render:id="REACTIONGLYPH_style_0" render:typeList="REACTIONGLYPH">
+              <render:g render:stroke="darkslategray" render:font-family="sans-serif" render:font-weight="normal" render:font-style="normal" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="12">
+                <render:ellipse render:stroke="black" render:stroke-width="2" render:fill="white" render:cx="50%" render:cy="50%" render:rx="50%"/>
+              </render:g>
+            </render:style>
+            <render:style render:id="substrate_style_0" render:roleList="substrate">
+              <render:g render:stroke="black" render:stroke-width="2"/>
+            </render:style>
+            <render:style render:id="sidesubstrate_style_0" render:roleList="sidesubstrate">
+              <render:g render:stroke="black" render:stroke-width="2"/>
+            </render:style>
+            <render:style render:id="product_style_0" render:roleList="product">
+              <render:g render:stroke="black" render:stroke-width="2" render:endHead="productHead"/>
+            </render:style>
+            <render:style render:id="sideproduct_style_0" render:roleList="sideproduct">
+              <render:g render:stroke="black" render:stroke-width="2" render:endHead="productHead"/>
+            </render:style>
+            <render:style render:id="modifier_style_0" render:roleList="modifier">
+              <render:g render:stroke="black" render:stroke-width="2" render:endHead="modifierHead"/>
+            </render:style>
+            <render:style render:id="activator_style_0" render:roleList="activator">
+              <render:g render:stroke="black" render:stroke-width="2" render:endHead="activatorHead"/>
+            </render:style>
+            <render:style render:id="inhibitor_style_0" render:roleList="inhibitor">
+              <render:g render:stroke="black" render:stroke-width="2" render:endHead="inhibitorHead"/>
+            </render:style>
+            <render:style render:id="EMPTY_SPECIESGLYPH_style_0" render:typeList="EMPTY_SPECIESGLYPH">
+              <render:g>
+                <render:ellipse render:stroke="black" render:stroke-width="2" render:fill="white" render:cx="50%" render:cy="50%" render:rx="50%"/>
+                <render:curve render:stroke="black" render:stroke-width="2">
+                  <render:listOfElements>
+                    <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="100%" render:y="0"/>
+                    <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="100%"/>
+                  </render:listOfElements>
+                </render:curve>
+              </render:g>
+            </render:style>
+            <render:style render:id="COMPARTMENTGLYPH_TEXTGLYPH_style_0" render:typeList="COMPARTMENTGLYPH_TEXTGLYPH">
+              <render:g render:stroke="darkcyan" render:font-family="sans-serif" render:font-weight="normal" render:font-style="normal" render:text-anchor="middle" render:vtext-anchor="bottom" render:font-size="10"/>
+            </render:style>
+            <render:style render:id="SPECIESGLYPH_TEXTGLYPH_style_0" render:typeList="SPECIESGLYPH_TEXTGLYPH">
+              <render:g render:stroke="black" render:font-family="sans-serif" render:font-weight="normal" render:font-style="normal" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="24"/>
+            </render:style>
+            <render:style render:id="REACTIONGLYPH_TEXTGLYPH_style_0" render:typeList="REACTIONGLYPH_TEXTGLYPH">
+              <render:g render:stroke="darkslategray" render:font-family="sans-serif" render:font-weight="normal" render:font-style="normal" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="12"/>
+            </render:style>
+            <render:style render:id="GRAPHICALOBJECT_style_0" render:typeList="GRAPHICALOBJECT">
+              <render:g render:stroke="black" render:font-family="sans-serif" render:font-weight="normal" render:font-style="normal" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="24">
+                <render:rectangle render:stroke="black" render:stroke-width="2" render:fill="white" render:x="0" render:y="0" render:width="100%" render:height="100%" render:rx="6" render:ry="3.6"/>
+              </render:g>
+            </render:style>
+          </render:listOfStyles>
+        </render:renderInformation>
+      </render:listOfGlobalRenderInformation>
+    </layout:listOfLayouts>
+  </model>
+</sbml>
