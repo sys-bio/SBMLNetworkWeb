@@ -41,8 +41,8 @@
     import libsbmlnetwork from './libsbmlnetwork.js';
 
     // Load SBML string from an external file
-    const SBML_FILE = '../sbml-examples/simple_sbml_model.xml';
-    // const SBML_FILE = '../sbml-examples/figure_2_sbgn_compliant.xml';
+    // const SBML_FILE = '../sbml-examples/simple_sbml_model.xml';
+    const SBML_FILE = '../sbml-examples/figure_2_sbgn_compliant.xml';
 
     // Utility: simple hash for SBML string (for demo; use a better hash for production)
     function hashSBML(sbml) {
@@ -204,7 +204,7 @@
               .text(speciesId);
           }
 
-          // ─── 7) DRAW REACTIONS (POLYLINES WITH ARROWHEADS) ───────────────────────
+          // ─── 7) DRAW REACTIONS (CENTROIDS + CURVES TO SPECIESREFERENCES) ─────────────
           const nReactions = Module._c_api_getNumReactions(docPtr);
           console.log("Number of reactions:", nReactions);
 
@@ -230,56 +230,99 @@
             const rxnId = Module.UTF8ToString(rxnIdPtr);
             const rxnIdStrPtr = Module.allocateUTF8(rxnId);
 
-            // How many segments does this reaction have?
-            // const nSegs = Module._c_api_getNumCurveSegments(docPtr, rxnIdStrPtr);
-            const nSegs = Module._c_api_getNumSpeciesReferenceCurveSegments(1, rxnIdStrPtr);
-            console.log("Number of segments:", nSegs);
+            // Get centroid coordinates for this reaction
+            const centroidX = Module._c_api_getX(docPtr, rxnIdStrPtr);
+            const centroidY = Module._c_api_getY(docPtr, rxnIdStrPtr);
 
-            // Gather all (x,y) points into an array
-            const pts = [];
-            for (let s = 0; s < nSegs; s++) {
-              // Start point
-              const sx = Module._c_api_getCurveSegmentStartPointX(docPtr, rxnIdStrPtr, s);
-              const sy = Module._c_api_getCurveSegmentStartPointY(docPtr, rxnIdStrPtr, s);
-              if (s === 0) pts.push([sx, sy]); // Only add the start of the first segment
+            // Draw the reaction centroid as a small circle
+            svg.append("circle")
+              .attr("cx", centroidX)
+              .attr("cy", centroidY)
+              .attr("r", 8)
+              .attr("fill", "#ccc")
+              .attr("stroke", "#444");
 
-              // End point
-              const ex = Module._c_api_getCurveSegmentEndPointX(docPtr, rxnIdStrPtr, s);
-              const ey = Module._c_api_getCurveSegmentEndPointY(docPtr, rxnIdStrPtr, s);
-              pts.push([ex, ey]);
+            // Draw label for the reaction at the centroid
+            svg.append("text")
+              .attr("x", centroidX)
+              .attr("y", centroidY - 12)
+              .attr("font-size", 10)
+              .attr("fill", "#444")
+              .attr("text-anchor", "middle")
+              .text(rxnId);
+
+            // Reactants
+            const nReactants = Module._c_api_getNumReactants(docPtr, rxnIdStrPtr);
+            console.log('Number of reactants:', nReactants);
+            for (let i = 0; i < nReactants; i++) {
+              const nSegs = Module._c_api_getNumSpeciesReferenceCurveSegments(docPtr, rxnIdStrPtr, i);
+              console.log('Reactant', i, 'segment', i, 'nSegs:', nSegs);
+              for (let s = 0; s < nSegs; s++) {
+                // Get start and end points for this segment
+                const sx = Module._c_api_getSpeciesReferenceCurveSegmentStartPointX(docPtr, rxnIdStrPtr, i, s);
+                const sy = Module._c_api_getSpeciesReferenceCurveSegmentStartPointY(docPtr, rxnIdStrPtr, i, s);
+                const ex = Module._c_api_getSpeciesReferenceCurveSegmentEndPointX(docPtr, rxnIdStrPtr, i, s);
+                const ey = Module._c_api_getSpeciesReferenceCurveSegmentEndPointY(docPtr, rxnIdStrPtr, i, s);
+                console.log('Reactant', i, 'segment', s, 'start:', sx, sy, 'end:', ex, ey);
+                // For now, draw as a straight line (can add Bezier if control points are present)
+                svg.append("line")
+                  .attr("x1", ex)
+                  .attr("y1", ey)
+                  .attr("x2", sx)
+                  .attr("y2", sy)
+                  .attr("stroke", "#696969")
+                  .attr("stroke-width", 2)
+                  .attr("marker-end", "url(#arrowhead)");
+              }
+            }
+
+            // Products
+            const nProducts = Module._c_api_getNumProducts(docPtr, rxnIdStrPtr);
+            console.log('Number of products:', nProducts);
+            const totalSpeciesRefs = nReactants + nProducts;
+            for (let idx = 0; idx < totalSpeciesRefs; idx++) {
+              const nSegs = Module._c_api_getNumSpeciesReferenceCurveSegments(docPtr, rxnIdStrPtr, idx);
+              console.log('SpeciesReference', idx, 'nSegs:', nSegs);
+            }
+            for (let i = 0; i < nProducts; i++) {
+              const speciesRefIdx = nReactants + i;
+              const nSegs = Module._c_api_getNumSpeciesReferenceCurveSegments(docPtr, rxnIdStrPtr, speciesRefIdx);
+              if (nSegs === 0) {
+                // Fallback: draw centroid to product species using the species glyph ID
+                /*const glyphIdPtr = Module._SpeciesReferenceGlyph_getSpeciesGlyphId(docPtr, rxnIdStrPtr, speciesRefIdx);
+                const glyphId = Module.UTF8ToString(glyphIdPtr);
+                const glyphIdStrPtr = Module.allocateUTF8(glyphId);
+                const prodX = Module._c_api_getX(docPtr, glyphIdStrPtr);
+                console.log(prodX);
+                const prodY = Module._c_api_getY(docPtr, glyphIdStrPtr);
+                Module._free(glyphIdStrPtr);
+                svg.append("line")
+                  .attr("x1", centroidX)
+                  .attr("y1", centroidY)
+                  .attr("x2", prodX)
+                  .attr("y2", prodY)
+                  .attr("stroke", "#696969")
+                  .attr("stroke-width", 2)
+                  .attr("marker-end", "url(#arrowhead)");*/
+              } else {
+                // Draw segments as before
+                for (let s = 0; s < nSegs; s++) {
+                  const sx = Module._c_api_getSpeciesReferenceCurveSegmentStartPointX(docPtr, rxnIdStrPtr, speciesRefIdx, s);
+                  const sy = Module._c_api_getSpeciesReferenceCurveSegmentStartPointY(docPtr, rxnIdStrPtr, speciesRefIdx, s);
+                  const ex = Module._c_api_getSpeciesReferenceCurveSegmentEndPointX(docPtr, rxnIdStrPtr, speciesRefIdx, s);
+                  const ey = Module._c_api_getSpeciesReferenceCurveSegmentEndPointY(docPtr, rxnIdStrPtr, speciesRefIdx, s);
+                  svg.append("line")
+                    .attr("x1", ex)
+                    .attr("y1", ey)
+                    .attr("x2", sx)
+                    .attr("y2", sy)
+                    .attr("stroke", "#696969")
+                    .attr("stroke-width", 2)
+                    .attr("marker-end", "url(#arrowhead)");
+                }
+              }
             }
             Module._free(rxnIdStrPtr);
-
-            console.log("Reaction", rxnId, "points:", pts);
-
-            // Build a D3 line generator (straight segments)
-            const lineGen = d3.line().curve(d3.curveLinear);
-
-            // Append a <path> using those points, with an arrowhead at the end
-            svg
-              .append("path")
-              .attr("d", lineGen(pts))
-              .attr("fill", "none")
-              .attr("stroke", "#696969")
-              .attr("stroke-width", 2)
-              .attr("marker-end", "url(#arrowhead)");
-
-            // OPTIONAL: place a tiny reaction‐label at the midpoint of the last segment
-            // (This is just one strategy—feel free to move it if you want every reaction labeled.)
-            if (pts.length >= 2) {
-              const [x1, y1] = pts[pts.length - 2];
-              const [x2, y2] = pts[pts.length - 1];
-              const midX = (x1 + x2) / 2;
-              const midY = (y1 + y2) / 2;
-              svg
-                .append("text")
-                .attr("x", midX)
-                .attr("y", midY - 6)
-                .attr("font-size", 9)
-                .attr("fill", "#444")
-                .attr("text-anchor", "middle")
-                .text(rxnId);
-            }
           }
 
           console.log("✅ Rendering complete.");
