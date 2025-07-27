@@ -89,9 +89,10 @@
           // If first time, run autolayout and persist the result
           if (firstTime) {
             if (Module._c_api_getNumLayouts(docPtr) === 0) {
-              Module._c_api_autolayout(docPtr);
+              Module._c_api_autolayout(docPtr, 1000);
             }
             const layoutStrPtr = Module._c_api_writeSBMLToString(docPtr);
+            console.log(layoutStrPtr);
             const layoutSBMLStr = Module.UTF8ToString(layoutStrPtr);
             Module._free(layoutStrPtr);
             localStorage.setItem(layoutKey, layoutSBMLStr);
@@ -159,6 +160,8 @@
             const speciesId = Module.UTF8ToString(spIdPtr);
             const spIdStrPtr = Module.allocateUTF8(speciesId);
 
+            // glyph loop
+
             // Read the layout box for this species
             const sx = Module._c_api_getX(docPtr, spIdStrPtr);
             const sy = Module._c_api_getY(docPtr, spIdStrPtr);
@@ -208,11 +211,11 @@
           const nReactions = Module._c_api_getNumReactions(docPtr);
           console.log("Number of reactions:", nReactions);
 
-          // First, define an <arrowhead> marker in <defs>
+          // First, define <arrowhead> markers in <defs>
           const defs = svg.append("defs");
           defs
             .append("marker")
-            .attr("id", "arrowhead")
+            .attr("id", "arrowhead-dark")
             .attr("viewBox", "0 -5 10 10")
             .attr("refX", 10)
             .attr("refY", 0)
@@ -223,6 +226,130 @@
             .append("path")
             .attr("d", "M0,-5L10,0L0,5")
             .attr("fill", "#696969");
+          // Optionally, a lighter marker for modifiers (not used for now)
+          // defs
+          //   .append("marker")
+          //   .attr("id", "arrowhead-light")
+          //   .attr("viewBox", "0 -5 10 10")
+          //   .attr("refX", 10)
+          //   .attr("refY", 0)
+          //   .attr("markerUnits", "strokeWidth")
+          //   .attr("markerWidth", 6)
+          //   .attr("markerHeight", 6)
+          //   .attr("orient", "auto")
+          //   .append("path")
+          //   .attr("d", "M0,-5L10,0L0,5")
+          //   .attr("fill", "#bbb");
+
+          // Group for edges (drawn under species nodes)
+          const edgeGroup = svg.append("g").attr("id", "edges");
+
+          // Helper: squared Euclidean distance
+          function dist2(ax, ay, bx, by) {
+            return (ax - bx) * (ax - bx) + (ay - by) * (ay - by);
+          }
+
+          // Helper: Build SVG path for a species reference (reactant/product/modifier)
+          function buildSpeciesRefPath(docPtr, rxnIdStrPtr, glyphIdx, refIdx) {
+            const nSegs = Module._c_api_getNumSpeciesReferenceCurveSegments(docPtr, rxnIdStrPtr, glyphIdx, refIdx);
+            let d = '';
+            let firstPt = null, lastPt = null;
+            for (let s = 0; s < nSegs; s++) {
+              const sx = Module._c_api_getSpeciesReferenceCurveSegmentStartPointX(docPtr, rxnIdStrPtr, glyphIdx, refIdx, s);
+              const sy = Module._c_api_getSpeciesReferenceCurveSegmentStartPointY(docPtr, rxnIdStrPtr, glyphIdx, refIdx, s);
+              const ex = Module._c_api_getSpeciesReferenceCurveSegmentEndPointX(docPtr, rxnIdStrPtr, glyphIdx, refIdx, s);
+              const ey = Module._c_api_getSpeciesReferenceCurveSegmentEndPointY(docPtr, rxnIdStrPtr, glyphIdx, refIdx, s);
+              if (s === 0) {
+                d += `M${sx},${sy}`;
+                firstPt = [sx, sy];
+              }
+              // Check for Bezier
+              let isBezier = false;
+              if (typeof Module._c_api_isSpeciesReferenceCurveSegmentCubicBezier === 'function') {
+                isBezier = Module._c_api_isSpeciesReferenceCurveSegmentCubicBezier(docPtr, rxnIdStrPtr, glyphIdx, refIdx, s);
+              }
+              if (isBezier) {
+                const cp1x = Module._c_api_getSpeciesReferenceCurveSegmentBasePoint1X(docPtr, rxnIdStrPtr, glyphIdx, refIdx, s);
+                const cp1y = Module._c_api_getSpeciesReferenceCurveSegmentBasePoint1Y(docPtr, rxnIdStrPtr, glyphIdx, refIdx, s);
+                const cp2x = Module._c_api_getSpeciesReferenceCurveSegmentBasePoint2X(docPtr, rxnIdStrPtr, glyphIdx, refIdx, s);
+                const cp2y = Module._c_api_getSpeciesReferenceCurveSegmentBasePoint2Y(docPtr, rxnIdStrPtr, glyphIdx, refIdx, s);
+                d += `C${cp1x},${cp1y},${cp2x},${cp2y},${ex},${ey}`;
+              } else {
+                d += `L${ex},${ey}`;
+              }
+              lastPt = [ex, ey];
+            }
+            return { d, firstPt, lastPt, nSegs };
+          }
+
+          // Helper: Draw all edges for a reaction (now with curves)
+          function drawReactionEdges(rxnId, centroidX, centroidY) {
+            const rxnIdStrPtr = Module.allocateUTF8(rxnId);
+
+            // Reactants
+            const nReactants = Module._c_api_getNumReactants(docPtr, rxnIdStrPtr);
+            for (let i = 0; i < nReactants; i++) {
+              const { d, firstPt, lastPt, nSegs } = buildSpeciesRefPath(docPtr, rxnIdStrPtr, 0, i);
+              if (!d || nSegs === 0) {
+                // fallback: straight line centroid to species
+                edgeGroup.append("line")
+                  .attr("x1", centroidX)
+                  .attr("y1", centroidY)
+                  .attr("x2", centroidX)
+                  .attr("y2", centroidY)
+                  .attr("stroke", "#696969");
+                continue;
+              }
+              edgeGroup.append("path")
+                .attr("d", d)
+                .attr("fill", "none")
+                .attr("stroke", "#696969")
+                .attr("stroke-width", 2)
+                .attr("marker-start", "url(#arrowhead-dark)")
+                .attr("marker-end", null);
+            }
+
+            // Products
+            const nProducts = Module._c_api_getNumProducts(docPtr, rxnIdStrPtr);
+            for (let i = 0; i < nProducts; i++) {
+              const speciesRefIdx = nReactants + i;
+              const { d, firstPt, lastPt, nSegs } = buildSpeciesRefPath(docPtr, rxnIdStrPtr, 0, speciesRefIdx);
+              if (!d || nSegs === 0) {
+                edgeGroup.append("line")
+                  .attr("x1", centroidX)
+                  .attr("y1", centroidY)
+                  .attr("x2", centroidX)
+                  .attr("y2", centroidY)
+                  .attr("stroke", "#696969");
+                continue;
+              }
+              edgeGroup.append("path")
+                .attr("d", d)
+                .attr("fill", "none")
+                .attr("stroke", "#696969")
+                .attr("stroke-width", 2)
+                .attr("marker-start", null)
+                .attr("marker-end", "url(#arrowhead-dark)");
+            }
+
+            // Modifiers (optional, dashed, no arrowhead)
+            if (typeof Module._c_api_getNumModifiers === 'function') {
+              const nModifiers = Module._c_api_getNumModifiers(docPtr, rxnIdStrPtr);
+              for (let i = 0; i < nModifiers; i++) {
+                const speciesRefIdx = nReactants + nProducts + i;
+                const { d, nSegs } = buildSpeciesRefPath(docPtr, rxnIdStrPtr, 0, speciesRefIdx);
+                if (!d || nSegs === 0) continue;
+                edgeGroup.append("path")
+                  .attr("d", d)
+                  .attr("fill", "none")
+                  .attr("stroke", "#999")
+                  .attr("stroke-width", 2)
+                  .attr("stroke-dasharray", "4,3");
+              }
+            }
+
+            Module._free(rxnIdStrPtr);
+          }
 
           // Now loop over every reaction
           for (let k = 0; k < nReactions; k++) {
@@ -251,77 +378,7 @@
               .attr("text-anchor", "middle")
               .text(rxnId);
 
-            // Reactants
-            const nReactants = Module._c_api_getNumReactants(docPtr, rxnIdStrPtr);
-            console.log('Number of reactants:', nReactants);
-            for (let i = 0; i < nReactants; i++) {
-              const nSegs = Module._c_api_getNumSpeciesReferenceCurveSegments(docPtr, rxnIdStrPtr, i);
-              console.log('Reactant', i, 'segment', i, 'nSegs:', nSegs);
-              for (let s = 0; s < nSegs; s++) {
-                // Get start and end points for this segment
-                const sx = Module._c_api_getSpeciesReferenceCurveSegmentStartPointX(docPtr, rxnIdStrPtr, i, s);
-                const sy = Module._c_api_getSpeciesReferenceCurveSegmentStartPointY(docPtr, rxnIdStrPtr, i, s);
-                const ex = Module._c_api_getSpeciesReferenceCurveSegmentEndPointX(docPtr, rxnIdStrPtr, i, s);
-                const ey = Module._c_api_getSpeciesReferenceCurveSegmentEndPointY(docPtr, rxnIdStrPtr, i, s);
-                console.log('Reactant', i, 'segment', s, 'start:', sx, sy, 'end:', ex, ey);
-                // For now, draw as a straight line (can add Bezier if control points are present)
-                svg.append("line")
-                  .attr("x1", ex)
-                  .attr("y1", ey)
-                  .attr("x2", sx)
-                  .attr("y2", sy)
-                  .attr("stroke", "#696969")
-                  .attr("stroke-width", 2)
-                  .attr("marker-end", "url(#arrowhead)");
-              }
-            }
-
-            // Products
-            const nProducts = Module._c_api_getNumProducts(docPtr, rxnIdStrPtr);
-            console.log('Number of products:', nProducts);
-            const totalSpeciesRefs = nReactants + nProducts;
-            for (let idx = 0; idx < totalSpeciesRefs; idx++) {
-              const nSegs = Module._c_api_getNumSpeciesReferenceCurveSegments(docPtr, rxnIdStrPtr, idx);
-              console.log('SpeciesReference', idx, 'nSegs:', nSegs);
-            }
-            for (let i = 0; i < nProducts; i++) {
-              const speciesRefIdx = nReactants + i;
-              const nSegs = Module._c_api_getNumSpeciesReferenceCurveSegments(docPtr, rxnIdStrPtr, speciesRefIdx);
-              if (nSegs === 0) {
-                // Fallback: draw centroid to product species using the species glyph ID
-                /*const glyphIdPtr = Module._SpeciesReferenceGlyph_getSpeciesGlyphId(docPtr, rxnIdStrPtr, speciesRefIdx);
-                const glyphId = Module.UTF8ToString(glyphIdPtr);
-                const glyphIdStrPtr = Module.allocateUTF8(glyphId);
-                const prodX = Module._c_api_getX(docPtr, glyphIdStrPtr);
-                console.log(prodX);
-                const prodY = Module._c_api_getY(docPtr, glyphIdStrPtr);
-                Module._free(glyphIdStrPtr);
-                svg.append("line")
-                  .attr("x1", centroidX)
-                  .attr("y1", centroidY)
-                  .attr("x2", prodX)
-                  .attr("y2", prodY)
-                  .attr("stroke", "#696969")
-                  .attr("stroke-width", 2)
-                  .attr("marker-end", "url(#arrowhead)");*/
-              } else {
-                // Draw segments as before
-                for (let s = 0; s < nSegs; s++) {
-                  const sx = Module._c_api_getSpeciesReferenceCurveSegmentStartPointX(docPtr, rxnIdStrPtr, speciesRefIdx, s);
-                  const sy = Module._c_api_getSpeciesReferenceCurveSegmentStartPointY(docPtr, rxnIdStrPtr, speciesRefIdx, s);
-                  const ex = Module._c_api_getSpeciesReferenceCurveSegmentEndPointX(docPtr, rxnIdStrPtr, speciesRefIdx, s);
-                  const ey = Module._c_api_getSpeciesReferenceCurveSegmentEndPointY(docPtr, rxnIdStrPtr, speciesRefIdx, s);
-                  svg.append("line")
-                    .attr("x1", ex)
-                    .attr("y1", ey)
-                    .attr("x2", sx)
-                    .attr("y2", sy)
-                    .attr("stroke", "#696969")
-                    .attr("stroke-width", 2)
-                    .attr("marker-end", "url(#arrowhead)");
-                }
-              }
-            }
+            drawReactionEdges(rxnId, centroidX, centroidY);
             Module._free(rxnIdStrPtr);
           }
 
