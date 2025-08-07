@@ -92,13 +92,12 @@
               Module._c_api_autolayout(docPtr, 1000);
             }
             const layoutStrPtr = Module._c_api_writeSBMLToString(docPtr);
-            console.log(layoutStrPtr);
             const layoutSBMLStr = Module.UTF8ToString(layoutStrPtr);
             Module._free(layoutStrPtr);
             localStorage.setItem(layoutKey, layoutSBMLStr);
           }
 
-          // ─── 4) READ CANVAS DIMENSIONS ──────────────────────────────────────────
+          // Get canvas dimensions from SBML layout
           const canvasWidth  = Module._c_api_getCanvasWidth(docPtr);
           const canvasHeight = Module._c_api_getCanvasHeight(docPtr);
           console.log(`Canvas size from SBML layout: ${canvasWidth}×${canvasHeight}`);
@@ -110,10 +109,10 @@
             .attr("width", canvasWidth)
             .attr("height", canvasHeight);
 
-          // OPTIONAL: draw a thin border around the SVG
+          // Draw a thin border around the SVG
           svg.style("border", "1px solid #bbb");
 
-          // ─── 5) DRAW COMPARTMENTS ────────────────────────────────────────────────
+          // Draw compartments
           const nComp = Module._c_api_getNumCompartments(docPtr);
           console.log("Number of compartments:", nComp);
           for (let i = 0; i < nComp; i++) {
@@ -152,15 +151,13 @@
               .text(compId);
           }
 
-          // ─── 6) DRAW SPECIES ─────────────────────────────────────────────────────
+          // Draw species
           const nSpecies = Module._c_api_getNumSpecies(docPtr);
           console.log("Number of species:", nSpecies);
           for (let j = 0; j < nSpecies; j++) {
             const spIdPtr = Module._c_api_getSpeciesId(docPtr, j);
             const speciesId = Module.UTF8ToString(spIdPtr);
             const spIdStrPtr = Module.allocateUTF8(speciesId);
-
-            // glyph loop
 
             // Read the layout box for this species
             const sx = Module._c_api_getX(docPtr, spIdStrPtr);
@@ -207,11 +204,11 @@
               .text(speciesId);
           }
 
-          // ─── 7) DRAW REACTIONS (CENTROIDS + CURVES TO SPECIESREFERENCES) ─────────────
+          // Draw reactions
           const nReactions = Module._c_api_getNumReactions(docPtr);
           console.log("Number of reactions:", nReactions);
 
-          // First, define <arrowhead> markers in <defs>
+          // Define arrowhead markers
           const defs = svg.append("defs");
           defs
             .append("marker")
@@ -226,28 +223,9 @@
             .append("path")
             .attr("d", "M0,-5L10,0L0,5")
             .attr("fill", "#696969");
-          // Optionally, a lighter marker for modifiers (not used for now)
-          // defs
-          //   .append("marker")
-          //   .attr("id", "arrowhead-light")
-          //   .attr("viewBox", "0 -5 10 10")
-          //   .attr("refX", 10)
-          //   .attr("refY", 0)
-          //   .attr("markerUnits", "strokeWidth")
-          //   .attr("markerWidth", 6)
-          //   .attr("markerHeight", 6)
-          //   .attr("orient", "auto")
-          //   .append("path")
-          //   .attr("d", "M0,-5L10,0L0,5")
-          //   .attr("fill", "#bbb");
 
           // Group for edges (drawn under species nodes)
           const edgeGroup = svg.append("g").attr("id", "edges");
-
-          // Helper: squared Euclidean distance
-          function dist2(ax, ay, bx, by) {
-            return (ax - bx) * (ax - bx) + (ay - by) * (ay - by);
-          }
 
           // Helper: Build SVG path for a species reference (reactant/product/modifier)
           function buildSpeciesRefPath(docPtr, rxnIdStrPtr, glyphIdx, refIdx) {
@@ -263,7 +241,7 @@
                 d += `M${sx},${sy}`;
                 firstPt = [sx, sy];
               }
-              // Check for Bezier
+              // Check for Bezier (incomplete functionality)
               let isBezier = false;
               if (typeof Module._c_api_isSpeciesReferenceCurveSegmentCubicBezier === 'function') {
                 isBezier = Module._c_api_isSpeciesReferenceCurveSegmentCubicBezier(docPtr, rxnIdStrPtr, glyphIdx, refIdx, s);
@@ -282,7 +260,7 @@
             return { d, firstPt, lastPt, nSegs };
           }
 
-          // Helper: Draw all edges for a reaction (now with curves)
+          // Helper: Draw all edges for a reaction
           function drawReactionEdges(rxnId, centroidX, centroidY) {
             const rxnIdStrPtr = Module.allocateUTF8(rxnId);
 

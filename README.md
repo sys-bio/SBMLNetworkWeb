@@ -93,7 +93,7 @@ SBMLNetworkWeb/
   - Reset layout button
   - Species and reaction visualization
 
-#### 2. D3.js Playground
+#### 2. D3.js Playground (Testing and messing around with D3.js)
 - **URL**: `http://localhost:8000/d3-playground/index.html`
 - **Purpose**: Basic D3.js examples and learning environment
 
